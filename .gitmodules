@@ -1,0 +1,6 @@
+[submodule "backend/src/OpenAI"]
+	path = backend/src/OpenAI
+	url = git@github.com:oishireiyo/OpenAI.git
+[submodule "backend/src/DeepLAPI"]
+	path = backend/src/DeepLAPI
+	url = git@github.com:oishireiyo/DeepLAPI.git
