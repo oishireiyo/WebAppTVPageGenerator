@@ -53,12 +53,12 @@ class PageGenerator(object):
   def check_deepl_api_key_valid(self, api_key: str) -> None:
     self.translator.set_api_key(api_key=api_key)
 
-  def get_similar_text_startframes(self, texts: list[str], startframes: list[int], subject: str, nreturns: int=1) -> list[str]:
+  def get_similar_text_startsecs(self, texts: list[str], startsecs: list[int], subject: str, nreturns: int=1) -> list[str]:
     emb_texts = TextEmbedding(texts=texts)
     emb_subject = TextEmbedding(texts=subject)
     cosines = CosSimilarities(vec1s=emb_texts, vec2=emb_subject[-1])
 
-    information = [info for info in zip(texts, startframes, cosines)]
+    information = [info for info in zip(texts, startsecs, cosines)]
     information = sorted(information, key=lambda x: x[2], reverse=True)
 
     return information[:nreturns]
@@ -122,9 +122,9 @@ class PageGenerator(object):
         text=llmres, source_lang='EN', target_lang='JA',
       )
 
-      goodsubtitles = self.get_similar_text_startframes(
+      goodsubtitles = self.get_similar_text_startsecs(
         texts=self.subtitle['texts'],
-        startframes=self.subtitle['startframes'],
+        startsecs=self.subtitle['startsecs'],
         subject=llmres,
         nreturns=1,
       )
