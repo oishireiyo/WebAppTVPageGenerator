@@ -2,6 +2,7 @@ import os
 import sys
 import pprint
 import json
+from typing import Union
 
 # Logging
 import logging
@@ -18,7 +19,7 @@ sys.path.append(os.path.dirname(os.pardir))
 from OpenAI.src.TextGeneration import TextGeneration
 from OpenAI.utils.textCosmetics import TextCosmetics
 from OpenAI.utils.textEmbedding import TextEmbedding, CosSimilarities
-from OpenAI.utils.textFromCSV import ParseSubtitleCSV
+from OpenAI.utils.textFromCSV import ParseSubtitleCSVreader, ParseSubtitleCSV
 from DeepLAPI.src.translator import DeepLTranslator
 
 class PageGenerator(object):
@@ -34,7 +35,7 @@ class PageGenerator(object):
 
     self.title = title
     self.csvfile = csvfile
-    self.subtitle = ParseSubtitleCSV(csvfile=csvfile)
+    self.subtitle = None
     self.n_summary_texts = n_summary_texts
 
   def set_title(self, title: str) -> None:
@@ -42,7 +43,10 @@ class PageGenerator(object):
 
   def set_csvfile(self, csvfile: str) -> None:
     self.csvfile = csvfile
-    self.subtitle = ParseSubtitleCSV(csvfile=csvfile)
+
+  def set_subtitle(self, csvreader: Union[list, None]) -> None:
+    self.subtitle = ParseSubtitleCSVreader(csvreader=csvreader) \
+      if not csvreader is None else ParseSubtitleCSV(csvfile=self.csvfile)
 
   def set_n_summary_texts(self, n_summary_texts: int) -> None:
     self.n_summary_texts = n_summary_texts
@@ -109,9 +113,11 @@ class PageGenerator(object):
       },
     )
 
+  def get_llm_payload(self):
+    return self.llm.get_payload()
+
   def print_llm_payload(self):
-    payload = self.llm.get_payload()
-    for line in pprint.pformat(payload, width=150).split('\n'):
+    for line in pprint.pformat(self.llm.get_payload(), width=150).split('\n'):
       logger.info(line)
 
   def execute(self):
@@ -140,6 +146,10 @@ if __name__ == '__main__':
   obj.check_deepl_api_key_valid(
     api_key=os.environ['DEEPL_API_KEY']
   )
+  obj.set_title(title='「座りっぱなし」は寿命が縮む')
+  obj.set_csvfile(csvfile='../assets/helth.csv')
+  obj.set_subtitle(csvreader=None)
+  obj.set_n_summary_texts(n_summary_texts=5)
   obj.set_system_character(
     text='あなたは質問に対してカジュアルかつ簡潔に回答するアシスタントです。'
   )
