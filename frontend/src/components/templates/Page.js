@@ -3,6 +3,7 @@ import ApplicationBar from "../organisms/ApplicationBar";
 import GivenVideoPlayer from "../organisms/GivenVideoPlayer";
 import CSVUploader from "../molecules/CSVUploader";
 import LLMPayloadShower from "../organisms/LLMPayloadShower";
+import CallButton from "../atoms/CallButton";
 
 export default function Page() {
   return (
@@ -17,7 +18,7 @@ export default function Page() {
           <LLMPayloadShower />
         </div>
         <div className="col-span-2 space-y-8 m-2">
-          <p>piyo</p>
+          <CallButton />
         </div>
       </div>
     </div>

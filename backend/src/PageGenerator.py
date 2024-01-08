@@ -1,8 +1,5 @@
 import os
 import sys
-import pprint
-import json
-from typing import Union
 
 # Logging
 import logging
@@ -14,146 +11,70 @@ handler_format = logging.Formatter('%(asctime)s : [%(name)s - %(lineno)d] %(leve
 stream_handler.setFormatter(handler_format)
 logger.addHandler(stream_handler)
 
-# Handmade modules
-sys.path.append(os.path.dirname(os.pardir))
-from OpenAI.src.TextGeneration import TextGeneration
-from OpenAI.utils.textCosmetics import TextCosmetics
-from OpenAI.utils.textEmbedding import TextEmbedding, CosSimilarities
-from OpenAI.utils.textFromCSV import ParseSubtitleCSVreader, ParseSubtitleCSV
-from DeepLAPI.src.translator import DeepLTranslator
-
 class PageGenerator(object):
-  def __init__(
-    self,
-    title: str='「座りっぱなし」は寿命が縮む',
-    csvfile: str='../assets/helth.csv',
-    n_summary_texts: int=5,
-    max_tokens_per_call: int=500,
-  ) -> None:
-    self.llm = TextGeneration(max_tokens_per_call=max_tokens_per_call)
-    self.translator = DeepLTranslator()
-
+  def __init__(self, title: str, output_html_name: str):
     self.title = title
-    self.csvfile = csvfile
-    self.subtitle = None
-    self.n_summary_texts = n_summary_texts
+    self.output_html_name = output_html_name
 
-  def set_title(self, title: str) -> None:
-    self.title = title
+  def get_paragraph_element(self, paragraph: str):
+    return f'<p>{paragraph}</p>\n'
 
-  def set_csvfile(self, csvfile: str) -> None:
-    self.csvfile = csvfile
+  def get_img_element(self, imagepath: str):
+    return f'<img src="{imagepath}" alt="{imagepath}" />\n'
 
-  def set_subtitle(self, csvreader: Union[list, None]) -> None:
-    self.subtitle = ParseSubtitleCSVreader(csvreader=csvreader) \
-      if not csvreader is None else ParseSubtitleCSV(csvfile=self.csvfile)
+  def get_contents(self, paragraphs: list[str], imagepaths: list[str]):
+    contents = ''
+    for paragraph, imagepath in zip(paragraphs, imagepaths):
+      contents += self.get_paragraph_element(paragraph=paragraph)
+      contents += self.get_img_element(imagepath=imagepath)
 
-  def set_n_summary_texts(self, n_summary_texts: int) -> None:
-    self.n_summary_texts = n_summary_texts
+    return contents
 
-  def check_openai_api_key_valid(self, api_key: str) -> None:
-    self.llm.set_api_key(api_key=api_key)
+  def generate(self, paragraphs: list[str], imagepaths: list[str]):
+    template = f'''
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset='UTF-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0'>
+<title>{self.title}</title>
+</head>
+<body>
+<h1>{self.title}</h1>
+  {self.get_contents(
+    paragraphs = paragraphs,
+    imagepaths = imagepaths,
+  )}
+</body>
+</html>
+'''
 
-  def check_deepl_api_key_valid(self, api_key: str) -> None:
-    self.translator.set_api_key(api_key=api_key)
-
-  def get_similar_text_startsecs(self, texts: list[str], startsecs: list[int], subject: str, nreturns: int=1) -> list[str]:
-    emb_texts = TextEmbedding(texts=texts)
-    emb_subject = TextEmbedding(texts=subject)
-    cosines = CosSimilarities(vec1s=emb_texts, vec2=emb_subject[-1])
-
-    information = [info for info in zip(texts, startsecs, cosines)]
-    information = sorted(information, key=lambda x: x[2], reverse=True)
-
-    return information[:nreturns]
-
-  def set_system_character(self, text: str) -> None:
-    self.llm.add_message_entry_as_specified_role_with_text_content(
-      role='system',
-      text=self.translator.translate(
-        text=text, source_lang='JA', target_lang='EN-US',
-      )
-    )
-
-  def set_subtitle_texts(self) -> None:
-    self.llm.add_message_entry_as_specified_role_with_text_content(
-      role='user',
-      text=self.translator.translate(
-        text=TextCosmetics(
-          text=f'''
-            以下に続く文章は"{self.title}"というタイトルのニュース番組を文字起こししたものです。\
-            動画の内容を{self.n_summary_texts}つの文章に要約し、文章の配列として出力してください。\
-            "{''.join(self.subtitle['texts'])}"
-          '''
-        ),
-        source_lang='JA',
-        target_lang='EN-US',
-      ),
-    )
-
-  def set_function_tool(self) -> None:
-    def dummy_function(responses: list[str]):
-      for response in responses:
-        logger.info(response)
-
-    self.llm.add_tool_entry_as_function(
-      tools={
-        'type': 'function',
-        'function': {
-          'name': dummy_function.__name__,
-          'description': 'Dummy function for controling the GPT output format.',
-          'parameters': {
-            'type': 'object',
-            'properties': {
-              'responses': {'type': 'array', 'items': {'type': 'string'}},
-            },
-            'required': ['responses'],
-          },
-        },
-      },
-    )
-
-  def get_llm_payload(self):
-    return self.llm.get_payload()
-
-  def print_llm_payload(self):
-    for line in pprint.pformat(self.llm.get_payload(), width=150).split('\n'):
-      logger.info(line)
-
-  def execute(self):
-    llmresponse = self.llm.execute()
-    llmresponse = json.loads(llmresponse.choices[0].message.tool_calls[0].function.arguments)['responses']
-    for llmres in llmresponse:
-      llmres = self.translator.translate(
-        text=llmres, source_lang='EN', target_lang='JA',
-      )
-
-      goodsubtitles = self.get_similar_text_startsecs(
-        texts=self.subtitle['texts'],
-        startsecs=self.subtitle['startsecs'],
-        subject=llmres,
-        nreturns=1,
-      )
-
-      logger.info(f'*  {llmres}')
-      logger.info(f'-> {goodsubtitles[0]}')
+    with open(self.output_html_name, 'w') as f:
+      f.write(template)
 
 if __name__ == '__main__':
-  obj = PageGenerator()
-  obj.check_openai_api_key_valid(
-    api_key=os.environ['OPENAI_API_KEY']
+  generator = PageGenerator(
+    title='「座りっぱなし」は寿命が縮む',
+    output_html_name='hoge.html'
   )
-  obj.check_deepl_api_key_valid(
-    api_key=os.environ['DEEPL_API_KEY']
+
+  paragraphs = [
+    '厚生労働省が健康維持のために必要な運動量の目安を発表しました。',
+    '成人は、１日60分以上のｳｫｰｷﾝｸﾞと週に23回のﾄﾚｰﾆﾝｸﾞを行うのが望ましいとされています。',
+    'さらに座りっぱなしの時間が長いと死亡ﾘｽｸが高まるとも指摘されました｡',
+    '厚生労働省の調査では、運動量が多い人は、少ない人と比べ、生活習慣病や死亡ﾘｽｸが低いことが報告されています｡',
+    '関西ﾃﾚﾋﾞﾆｭｰｽYouTubeﾁｬﾝﾈﾙをご覧いただき、ありがとうございます｡',
+  ]
+  imagepaths = [
+    'helth_0.png',
+    'helth_1.png',
+    'helth_2.png',
+    'helth_3.png',
+    'helth_4.png',
+  ]
+
+  generator.generate(
+    paragraphs=paragraphs,
+    imagepaths=imagepaths,
   )
-  obj.set_title(title='「座りっぱなし」は寿命が縮む')
-  obj.set_csvfile(csvfile='../assets/helth.csv')
-  obj.set_subtitle(csvreader=None)
-  obj.set_n_summary_texts(n_summary_texts=5)
-  obj.set_system_character(
-    text='あなたは質問に対してカジュアルかつ簡潔に回答するアシスタントです。'
-  )
-  obj.set_subtitle_texts()
-  obj.set_function_tool()
-  obj.print_llm_payload()
-  obj.execute()

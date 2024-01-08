@@ -19,11 +19,11 @@ handler_format = logging.Formatter('%(asctime)s : [%(name)s - %(lineno)d] %(leve
 stream_handler.setFormatter(handler_format)
 logger.addHandler(stream_handler)
 
-# Page generator
+# Page summarizer
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/../src/')
-from PageGenerator import PageGenerator
+from Summarizer import Summarizer
 
-generator = PageGenerator()
+summarizer = Summarizer()
 
 @app.route('/', methods=['GET'])
 def index():
@@ -32,7 +32,7 @@ def index():
 @app.route('/set_title', methods=['POST'])
 def set_title():
   arguments = request.get_json()
-  generator.set_title(title=arguments['title'])
+  summarizer.set_title(title=arguments['title'])
   response = {'result': True}
 
   return make_response(jsonify(response))
@@ -47,7 +47,7 @@ def set_subtitle():
 
   filecontent = filebuffer.stream.read().decode('SHIFT-JIS')
   csvreader = csv.reader(filecontent.splitlines(), delimiter=',')
-  generator.set_subtitle(csvreader=csvreader)
+  summarizer.set_subtitle(csvreader=csvreader)
   response = {'result': True}
 
   return make_response(jsonify(response))
@@ -55,7 +55,7 @@ def set_subtitle():
 @app.route('/set_n_summary_texts', methods=['POST'])
 def set_n_summary_texts():
   arguments = request.get_json()
-  generator.set_n_summary_texts(n_summary_texts=arguments['n_summary_texts'])
+  summarizer.set_n_summary_texts(n_summary_texts=arguments['n_summary_texts'])
   response = {'result': True}
 
   return make_response(jsonify(response))
@@ -63,35 +63,35 @@ def set_n_summary_texts():
 @app.route('/set_system_character', methods=['POST'])
 def set_system_character():
   arguments = request.get_json()
-  generator.set_system_character(text=arguments['text'])
+  summarizer.set_system_character(text=arguments['text'])
   response = {'result': True}
 
   return make_response(jsonify(response))
 
 @app.route('/set_subtitle_texts', methods=['GET'])
 def set_subtitle_texts():
-  generator.set_subtitle_texts()
+  summarizer.set_subtitle_texts()
   response = {'result': True}
 
   return make_response(jsonify(response))
 
 @app.route('/set_function_tool', methods=['GET'])
 def set_function_tool():
-  generator.set_function_tool()
+  summarizer.set_function_tool()
   response = {'result': True}
 
   return make_response(jsonify(response))
 
 @app.route('/get_llm_payload', methods=['GET'])
 def get_llm_payload():
-  payload = generator.get_llm_payload()
+  payload = summarizer.get_llm_payload()
   response = {'result': True, 'payload': payload}
 
   return make_response(jsonify(response))
 
 @app.route('/execute', methods=['GET'])
 def execute():
-  generator.execute()
+  summarizer.execute()
   response = {'result': True}
 
   return make_response(jsonify(response))
