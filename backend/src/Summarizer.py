@@ -127,6 +127,7 @@ class Summarizer(object):
     self.llm.add_message_entry_as_specified_role(role='assistant')
     self.llm.add_text_content(text='\n'.join(llmresponse))
 
+    allgoodsubtitles = []
     for llmres in llmresponse:
       llmres = self.translator.translate(
         text=llmres, source_lang='EN', target_lang='JA',
@@ -140,6 +141,10 @@ class Summarizer(object):
 
       logger.info(f'*  {llmres}')
       logger.info(f'-> {goodsubtitles[0]}')
+
+      allgoodsubtitles.append(goodsubtitles)
+
+    return llmresponse, allgoodsubtitles
 
 if __name__ == '__main__':
   obj = Summarizer()
@@ -159,4 +164,28 @@ if __name__ == '__main__':
   obj.set_subtitle_texts()
   obj.set_function_tool()
   obj.print_llm_payload()
-  obj.execute()
+  llmresponse, allgoodsubtitles = obj.execute()
+
+  from FrameExtractor import FrameExtractor
+  from PageGenerator import PageGenerator
+  import cv2
+
+  frame_extractor = FrameExtractor()
+  frame_extractor.set_video_name(video_name='../assets/helth.mp4')
+  frame_extractor.set_video()
+
+  frames = frame_extractor.extract_with_millisecs(millisecs=[int(goodsubtitles[0][1]) for goodsubtitles in allgoodsubtitles])
+
+  imagepaths = []
+  for i, frame in enumerate(frames):
+    cv2.imwrite(f'helth_{i}.png', frame)
+    imagepaths.append(f'helth_{i}.png')
+
+  page_generator = PageGenerator(
+    title='「座りっぱなし」は寿命が縮む',
+    output_html_name='hoge.html',
+  )
+  page_generator.generate(
+    paragraphs=llmresponse,
+    imagepaths=imagepaths,
+  )
