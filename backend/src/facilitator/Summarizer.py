@@ -15,7 +15,7 @@ stream_handler.setFormatter(handler_format)
 logger.addHandler(stream_handler)
 
 # Handmade modules
-sys.path.append(os.path.dirname(os.pardir))
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/../')
 from OpenAI.src.TextGeneration import TextGeneration
 from OpenAI.utils.textCosmetics import TextCosmetics
 from OpenAI.utils.textEmbedding import TextEmbedding, CosSimilarities
@@ -25,10 +25,11 @@ from DeepLAPI.src.translator import DeepLTranslator
 class Summarizer(object):
   def __init__(
     self,
+    max_tokens_per_call: int=500,
     title: str='「座りっぱなし」は寿命が縮む',
     csvfile: str='../assets/helth.csv',
     n_summary_texts: int=5,
-    max_tokens_per_call: int=500,
+    do_translate: bool=True,
   ) -> None:
     self.llm = TextGeneration(max_tokens_per_call=max_tokens_per_call)
     self.translator = DeepLTranslator()
@@ -37,6 +38,7 @@ class Summarizer(object):
     self.csvfile = csvfile
     self.subtitle = None
     self.n_summary_texts = n_summary_texts
+    self.do_translate = do_translate
 
   def set_title(self, title: str) -> None:
     self.title = title
@@ -67,31 +69,33 @@ class Summarizer(object):
 
     return information[:nreturns]
 
-  def set_system_character(self, text: str) -> None:
+  def set_system_character(self) -> None:
+    text=(
+      'あなたは文章要約のプロです。\n'
+      '以下の制約条件に従い、文章を要約します。\n'
+      '#制約条件:\n'
+      '・入力文と同じ言語で出力すること。\n'
+      '・要約文のみ出力すること。\n'
+      f'・{self.n_summary_texts}個の文章を出力すること。'
+    )
     self.llm.add_message_entry_as_specified_role_with_text_content(
       role='system',
       text=self.translator.translate(
         text=text, source_lang='JA', target_lang='EN-US',
-      )
+      ) if self.do_translate else text,
     )
 
   def set_subtitle_texts(self) -> None:
+    text = ''.join(self.subtitle['texts'])
     self.llm.add_message_entry_as_specified_role_with_text_content(
       role='user',
       text=self.translator.translate(
-        text=TextCosmetics(
-          text=f'''
-            以下に続く文章は"{self.title}"というタイトルのニュース番組を文字起こししたものです。\
-            動画の内容を{self.n_summary_texts}個の文章に要約し、文章の配列として出力してください。\
-            "{''.join(self.subtitle['texts'])}"
-          '''
-        ),
-        source_lang='JA',
-        target_lang='EN-US',
-      ),
+        text=TextCosmetics(text=text), source_lang='JA', target_lang='EN-US',
+      ) if self.do_translate else TextCosmetics(text),
     )
 
   def set_function_tool(self) -> None:
+    # https://json-schema.org/understanding-json-schema/reference/array
     def dummy_function(responses: list[str]):
       for response in responses:
         logger.info(response)
@@ -101,7 +105,7 @@ class Summarizer(object):
         'type': 'function',
         'function': {
           'name': dummy_function.__name__,
-          'description': 'Dummy function for controling the GPT output format.',
+          'description': '出力のフォーマットを制御するための関数。',
           'parameters': {
             'type': 'object',
             'properties': {
@@ -127,11 +131,12 @@ class Summarizer(object):
     self.llm.add_message_entry_as_specified_role(role='assistant')
     self.llm.add_text_content(text='\n'.join(llmresponse))
 
+    llmresponsejp = []
     allgoodsubtitles = []
     for llmres in llmresponse:
       llmres = self.translator.translate(
         text=llmres, source_lang='EN', target_lang='JA',
-      )
+      ) if self.do_translate else llmres
       goodsubtitles = self.get_similar_text_startsecs(
         texts=self.subtitle['texts'],
         startsecs=self.subtitle['startsecs'],
@@ -142,9 +147,10 @@ class Summarizer(object):
       logger.info(f'*  {llmres}')
       logger.info(f'-> {goodsubtitles[0]}')
 
+      llmresponsejp.append(llmres)
       allgoodsubtitles.append(goodsubtitles)
 
-    return llmresponse, allgoodsubtitles
+    return llmresponsejp, allgoodsubtitles
 
 if __name__ == '__main__':
   obj = Summarizer()
@@ -158,9 +164,7 @@ if __name__ == '__main__':
   obj.set_csvfile(csvfile='../assets/helth.csv')
   obj.set_subtitle(csvreader=None)
   obj.set_n_summary_texts(n_summary_texts=5)
-  obj.set_system_character(
-    text='あなたは質問に対してカジュアルかつ簡潔に回答するアシスタントです。'
-  )
+  obj.set_system_character()
   obj.set_subtitle_texts()
   obj.set_function_tool()
   obj.print_llm_payload()

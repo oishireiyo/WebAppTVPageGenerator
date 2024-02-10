@@ -63,6 +63,15 @@ class FrameExtractor(object):
 
     return frames
 
+  def save_frames(self, frames: list[np.ndarray], dirname: str) -> list[str]:
+    imagepaths = []
+    for i, frame in enumerate(frames):
+      imagename = f'{dirname}/{i}.png'
+      cv2.imwrite(imagename, frame)
+      imagepaths.append(imagename)
+
+    return imagepaths
+
 if __name__ == '__main__':
   import pprint
 
