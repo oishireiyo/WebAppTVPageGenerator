@@ -66,8 +66,8 @@ class TVPageGenerator(object):
     self.frame_extractor.set_video()
 
     # ビデオから適切なフレームを取得する
-    frames = self.frame_extractor.extract_with_millisecs(
-      millisecs=[int(goodsubtitles[0][1]) for goodsubtitles in allgoodsubtitles]
+    frames = self.frame_extractor.extract_with_centisecs(
+      centisecs=[int(goodsubtitles[0][1]) for goodsubtitles in allgoodsubtitles]
     )
 
     # フレームを画像として保存
@@ -81,5 +81,19 @@ class TVPageGenerator(object):
     )
 
 if __name__ == '__main__':
-  obj = TVPageGenerator()
+  obj = TVPageGenerator(
+    title='アメリカ主導のウクライナ支援 曲がり角?議会で予算が通らず年末までに予算枯渇の可能性',
+    video_path='../assets/Ukraine.mp4',
+    csvfile='../assets/Ukraine.csv',
+    output_html_dir='Ukrain',
+    output_html_name='Ukurain.html',
+  )
+  # obj = TVPageGenerator(
+  #   title='学校に行かない子供が増加 問われ始めた学校教育のあり方とは 学校の未来 不登校30万人から考える',
+  #   video_path='../assets/Tuant.mp4',
+  #   csvfile='../assets/Tuant.csv',
+  #   output_html_dir='Tuant',
+  #   output_html_name='Tuant.html',
+  # )
+  # obj = TVPageGenerator()
   obj.execute()

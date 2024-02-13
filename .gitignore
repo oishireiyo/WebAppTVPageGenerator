@@ -163,4 +163,6 @@ cython_debug/
 **/assets/*
 **/node_modules/*
 **/.DS_Store
-backend/src/outputs/*
+backend/src/**/*.png
+backend/src/**/*.html
+backend/src/**/*.zip

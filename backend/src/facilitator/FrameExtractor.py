@@ -37,6 +37,9 @@ class FrameExtractor(object):
   def convert_sec_to_frame(self, sec):
     return math.ceil(self.video.get(cv2.CAP_PROP_FPS) * sec)
 
+  def convert_centisec_to_frame(self, centisec):
+    return self.convert_sec_to_frame(sec=centisec/1e2)
+
   def convert_millisec_to_frame(self, millisec):
     return self.convert_sec_to_frame(sec=millisec/1e3)
 
@@ -57,8 +60,8 @@ class FrameExtractor(object):
 
     return frames
 
-  def extract_with_millisecs(self, millisecs: list[int]) -> list[np.ndarray]:
-    frame_numbers = [self.convert_millisec_to_frame(millisec=millisec) for millisec in millisecs]
+  def extract_with_centisecs(self, centisecs: list[int]) -> list[np.ndarray]:
+    frame_numbers = [self.convert_centisec_to_frame(centisec=centisec) for centisec in centisecs]
     frames = self.extract_with_frame_numbers(frame_numbers=frame_numbers)
 
     return frames

@@ -76,7 +76,9 @@ class Summarizer(object):
       '#制約条件:\n'
       '・入力文と同じ言語で出力すること。\n'
       '・要約文のみ出力すること。\n'
-      f'・{self.n_summary_texts}個の文章を出力すること。'
+      f'・{self.n_summary_texts}個の文章に要約すること。\n'
+      # '・口語体を使用すること。\n'
+      '・丁寧語で統一すること。'
     )
     self.llm.add_message_entry_as_specified_role_with_text_content(
       role='system',
@@ -105,7 +107,7 @@ class Summarizer(object):
         'type': 'function',
         'function': {
           'name': dummy_function.__name__,
-          'description': '出力のフォーマットを制御するための関数。',
+          'description': '要約結果からHTMLを作成する関数',
           'parameters': {
             'type': 'object',
             'properties': {
@@ -178,7 +180,7 @@ if __name__ == '__main__':
   frame_extractor.set_video_name(video_name='../assets/helth.mp4')
   frame_extractor.set_video()
 
-  frames = frame_extractor.extract_with_millisecs(millisecs=[int(goodsubtitles[0][1]) for goodsubtitles in allgoodsubtitles])
+  frames = frame_extractor.extract_with_centisecs(millisecs=[int(goodsubtitles[0][1]) for goodsubtitles in allgoodsubtitles])
 
   imagepaths = []
   for i, frame in enumerate(frames):
